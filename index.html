@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153e35">
+  <meta name="description" content="Descubra quanto sua viagem vai custar. Calculadora de combustível por marca, modelo e versão, com dados do Inmetro.">
+  <title>Combustível Inteligente — calcule sua próxima viagem</title>
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#calculadora">Ir para a calculadora</a>
+  <header class="site-header shell">
+    <a href="./" class="brand" aria-label="Combustível Inteligente, início">
+      <img src="./assets/icon.svg" alt="" width="40" height="40">
+      <span>combustível<span class="brand-light">inteligente</span></span>
+    </a>
+    <nav aria-label="Navegação principal">
+      <a href="#como-funciona">Como funciona</a>
+      <button id="install" class="button-outline" type="button"><span aria-hidden="true">↗</span> Instalar app</button>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="status-dot"></span> MENOS SURPRESAS. MAIS CAMINHOS.</span>
+        <h1 id="hero-title">Antes de pegar a estrada,<br>saiba <span>quanto vai gastar.</span></h1>
+        <p>Seu carro, seu trajeto, seu orçamento. Calcule o combustível<br class="desktop-break"> da próxima viagem em poucos segundos.</p>
+        <div class="hero-proof"><span>✓ Consumo por modelo</span><span>✓ Gratuito e sem cadastro</span><span>✓ Funciona offline</span></div>
+      </div>
+      <div class="journey-art" aria-hidden="true">
+        <div class="art-grid"></div>
+        <svg viewBox="0 0 320 180" fill="none">
+          <path d="M-20 135H115C176 135 127 45 191 45H330" stroke="#e3e9dc" stroke-width="38"/>
+          <path d="M-20 135H115C176 135 127 45 191 45H330" stroke="#fff" stroke-width="2" stroke-dasharray="8 8"/>
+          <circle cx="36" cy="135" r="9" fill="#d9f886" stroke="#153e35" stroke-width="3"/>
+          <path d="M273 49s16-17 16-27a16 16 0 0 0-32 0c0 10 16 27 16 27Z" fill="#153e35"/>
+          <circle cx="273" cy="22" r="5" fill="#d9f886"/>
+          <g transform="translate(123 92) rotate(-38)"><rect x="0" y="0" width="42" height="23" rx="7" fill="#153e35"/><rect x="13" y="3" width="15" height="17" rx="4" fill="#d9f886"/><path d="M18 3v17" stroke="#153e35" stroke-width="2"/></g>
+        </svg>
+        <div class="art-tag"><span class="status-dot"></span> Planeje. Abasteça. Vá.</div>
+      </div>
+    </section>
+
+    <div class="workspace" id="calculadora">
+      <section class="calculator-card" aria-labelledby="calculator-title">
+        <div class="section-top"><div><span class="overline">PLANEJE SEU TRAJETO</span><h2 id="calculator-title">Vamos fazer as contas?</h2></div><span class="small-icon" aria-hidden="true">↗</span></div>
+        <form id="trip-form" novalidate>
+          <fieldset class="vehicle-section">
+            <legend><span class="step">01</span> Seu veículo</legend>
+            <div class="segmented mode-switch" role="group" aria-label="Origem do consumo">
+              <button type="button" id="catalog-mode" aria-pressed="true">Selecionar meu carro</button>
+              <button type="button" id="manual-mode" aria-pressed="false">Informar consumo</button>
+            </div>
+            <div id="catalog-fields">
+              <div class="form-grid">
+                <label>Marca<select id="brand" name="brand"></select></label>
+                <label>Modelo<select id="model" name="model"></select></label>
+              </div>
+              <label class="full-field">Versão e motorização<select id="version" name="version"></select></label>
+              <div class="consumption-strip"><span class="consumption-icon" aria-hidden="true">◉</span><div><strong id="vehicle-consumption">Carregando a base…</strong><span id="vehicle-source">Consumo de referência · Inmetro / PBE 2026</span></div></div>
+              <p class="field-note">Ciclo 2026 da tabela, não o ano do carro. Seu modelo ou ano não está aqui? Use “Informar consumo”.</p>
+            </div>
+            <div id="manual-fields" hidden>
+              <div class="form-grid"><label>Consumo na cidade <span class="label-unit">km/l</span><input id="manual-city" inputmode="decimal" value="10" autocomplete="off"></label>
+                <label>Consumo na estrada <span class="label-unit">km/l</span><input id="manual-highway" inputmode="decimal" value="14" autocomplete="off"></label></div>
+              <p class="field-note">Informe o consumo do seu carro para o combustível selecionado. Se você conhece apenas a média, repita o valor nos dois campos.</p>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend><span class="step">02</span> Seu caminho</legend>
+            <div class="form-grid distance-row">
+              <label>Distância de ida <span class="label-unit">km</span><input id="distance" name="distance" inputmode="decimal" value="100" autocomplete="off"></label>
+              <label class="check-field"><input type="checkbox" id="round-trip" name="round-trip"><span class="custom-check" aria-hidden="true"></span><span>Incluir a volta<small>Dobra a distância de ida</small></span></label>
+            </div>
+            <span class="field-label" id="route-label">Tipo de trajeto</span>
+            <div class="segmented route-switch" role="group" aria-labelledby="route-label">
+              <button type="button" data-route="city" aria-pressed="false">Cidade</button>
+              <button type="button" data-route="mixed" aria-pressed="true">Misto</button>
+              <button type="button" data-route="highway" aria-pressed="false">Estrada</button>
+            </div>
+            <div id="mix-fields" class="mix-fields"><label for="city-share"><span id="city-share-label">50% cidade · 50% estrada</span><input id="city-share" type="range" min="0" max="100" step="5" value="50"></label></div>
+          </fieldset>
+
+          <fieldset>
+            <legend><span class="step">03</span> Na hora de abastecer</legend>
+            <div id="fuel-options" class="segmented fuel-switch" role="group" aria-label="Combustível"></div>
+            <div class="form-grid prices-grid">
+              <label id="gasoline-price-label">Gasolina <span class="label-unit">R$/l</span><input id="gasoline-price" inputmode="decimal" value="6,20" autocomplete="off"></label>
+              <label id="ethanol-price-label">Etanol <span class="label-unit">R$/l</span><input id="ethanol-price" inputmode="decimal" value="4,20" autocomplete="off"></label>
+              <label id="diesel-price-label" hidden>Diesel <span class="label-unit">R$/l</span><input id="diesel-price" inputmode="decimal" value="6,50" autocomplete="off"></label>
+            </div>
+            <p class="field-note">Preços de exemplo. Atualize com os valores do seu posto.</p>
+            <details class="extras"><summary>Dividir o custo e planejar o mês <span aria-hidden="true">＋</span></summary>
+              <div class="form-grid"><label>Pessoas para dividir<input id="people" type="number" min="1" max="100" step="1" value="1"></label><label>Trajetos iguais por mês<input id="trips" type="number" min="1" max="1000" step="1" value="22"></label></div>
+              <p class="field-note">Cada trajeto inclui a volta, se marcada acima.</p>
+            </details>
+          </fieldset>
+          <p id="form-error" class="form-error" role="alert" hidden></p>
+          <button class="button-primary" type="submit">Calcular meu gasto <span aria-hidden="true">→</span></button>
+          <button id="reset-example" class="button-text reset-button" type="button">Restaurar exemplo</button>
+        </form>
+      </section>
+
+      <aside class="results-column" id="resultado" aria-label="Resultado da simulação">
+        <section class="result-card" aria-labelledby="result-title">
+          <div class="result-top"><span class="overline" id="result-title">SEU TRAJETO EM NÚMEROS</span><span class="result-icon" aria-hidden="true">↗</span></div>
+          <div id="result-content" aria-live="polite" aria-atomic="true">
+            <span class="result-caption">Custo estimado de combustível</span>
+            <strong class="total-cost" id="total-cost">—</strong>
+            <p class="result-route" id="result-route">Preencha seu trajeto para começar.</p>
+            <div class="result-divider"></div>
+            <dl class="result-stats"><div><dt>Combustível necessário</dt><dd id="liters">—</dd></div><div><dt>Custo por quilômetro</dt><dd id="cost-per-km">—</dd></div><div><dt>Consumo no trajeto</dt><dd id="effective-consumption">—</dd></div><div><dt>Custo por pessoa</dt><dd id="per-person">—</dd></div></dl>
+            <div class="monthly"><div><span>Se esse caminho faz parte da rotina</span><strong id="monthly-cost">—</strong></div><small id="monthly-caption">Projeção mensal de combustível</small></div>
+          </div>
+          <div class="result-actions"><button id="copy-result" type="button">Copiar resultado <span aria-hidden="true">↗</span></button><span id="copy-status" role="status"></span></div>
+        </section>
+        <section class="comparison-card" id="comparison-card" aria-labelledby="comparison-title">
+          <span class="overline">ESCOLHA MAIS ECONÔMICA</span><h3 id="comparison-title">Gasolina ou etanol?</h3>
+          <div id="comparison-content" aria-live="polite"><p>Informe os preços para comparar.</p></div>
+        </section>
+        <div class="estimate-note"><span aria-hidden="true">ⓘ</span><p>Uma estimativa para planejar melhor. Trânsito, ar-condicionado, carga e manutenção podem alterar o consumo. Pedágios e outros gastos não estão incluídos.</p></div>
+      </aside>
+    </div>
+
+    <section class="how-section" id="como-funciona" aria-labelledby="how-title">
+      <div class="how-title"><span class="overline">SIMPLES DO INÍCIO AO DESTINO</span><h2 id="how-title">Três passos. Uma viagem mais tranquila.</h2></div>
+      <div class="how-grid"><article><span class="how-number">01 /</span><h3>Escolha seu carro</h3><p>Marca, modelo e versão. Nós preenchemos o consumo de referência para você.</p></article><article><span class="how-number">02 /</span><h3>Desenhe seu caminho</h3><p>Informe a distância, o tipo de trajeto e se também quer calcular a volta.</p></article><article><span class="how-number">03 /</span><h3>Viaje com as contas feitas</h3><p>Veja litros, custo total e a melhor opção de combustível para o seu carro.</p></article></div>
+    </section>
+    <details class="source-details"><summary>De onde vêm os dados e como calculamos?</summary><div><p id="source-summary"></p><p>Litros = distância na cidade ÷ consumo na cidade + distância na estrada ÷ consumo na estrada. Custo = litros × preço por litro. A comparação entre gasolina e etanol usa os consumos específicos da versão escolhida.</p><p>A base contempla veículos a combustão e híbridos sem recarga externa. Elétricos e híbridos plug-in não entram neste cálculo de combustível. Para outros anos e versões, use o consumo manual em km/l.</p><p><a id="source-link" target="_blank" rel="noopener noreferrer">Consultar tabela oficial do Inmetro ↗</a></p></div></details>
+  </main>
+
+  <footer class="shell"><span>combustível<span class="brand-light">inteligente</span> <small>· Feito para ir mais longe.</small></span><a href="https://github.com/DrLucasPCD/CombustivelInteligente" target="_blank" rel="noopener noreferrer">Projeto no GitHub ↗</a></footer>
+  <dialog id="install-dialog"><div class="dialog-top"><h2>Seu app, sempre à mão.</h2><button type="button" id="close-install" aria-label="Fechar">×</button></div><p>No <strong>Android ou computador</strong>, abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.</p><p>No <strong>iPhone ou iPad</strong>, abra no Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p><p class="field-note">Após o primeiro acesso online, a calculadora também funciona sem internet. A instalação depende do navegador e do acesso por HTTPS.</p><button id="install-confirm" type="button" class="button-primary">Entendi</button></dialog>
+  <noscript><p class="noscript">Ative o JavaScript no navegador para usar a calculadora.</p></noscript>
+</body>
+</html>
