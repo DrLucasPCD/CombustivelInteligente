@@ -1,5 +1,6 @@
 import { vehicles, metadata } from './vehicles.js';
 import { calculateTrip, compareFuels, parseDecimal, fuelNames } from './calculator.js';
+import './maintenance.js';
 
 const $ = id => document.getElementById(id);
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);

@@ -1,6 +1,6 @@
 # Combustível Inteligente
 
-App web responsivo e instalável (PWA) para estimar gastos de combustível pelo veículo e pelo trajeto. Português do Brasil, valores em reais e quilômetros. Não precisa de cadastro, chave de API ou backend.
+App web responsivo e instalável (PWA) para estimar gastos de combustível pelo veículo e pelo trajeto, com histórico de revisões por carro. Português do Brasil, valores em reais e quilômetros. Não precisa de conta, chave de API ou backend.
 
 ## Usar
 
@@ -11,6 +11,16 @@ App web responsivo e instalável (PWA) para estimar gastos de combustível pelo 
 5. Veja litros necessários, custo total, custo por km, divisão por pessoas e projeção mensal.
 
 Para veículos flex, compara gasolina e etanol com base no consumo específico da versão. A última seleção fica salva somente no navegador. Use “Restaurar exemplo” para voltar aos valores iniciais.
+
+## Registrar revisões
+
+Abra **Revisões** no menu. Cadastre o carro com um nome e a quilometragem atual; a seleção da calculadora sugere o nome. Cada cadastro representa um carro físico, permitindo manter históricos separados mesmo para carros do mesmo modelo.
+
+Em **Registrar revisão**, informe data, quilometragem, serviços realizados e custo (inclusive zero). Oficina e observações são opcionais. Você pode editar ou excluir registros. Excluir um carro também exclui suas revisões, após confirmação no app.
+
+Informe a data ou a quilometragem da próxima revisão conforme o prazo que você deseja acompanhar. Se informar as duas, vale a primeira a ser atingida. O painel usa a previsão do registro mais recente por data (e quilometragem no desempate); um novo registro substitui a previsão geral anterior. O aviso de proximidade aparece a partir de 30 dias ou 1.000 km do prazo informado. Esses limites são avisos do app, não intervalos recomendados pelo fabricante. Atualize a quilometragem em **Editar carro e quilometragem**. Os avisos aparecem no painel ao abrir o app; não são notificações em segundo plano.
+
+O histórico é salvo em `localStorage` neste navegador e funciona offline. Não há sincronização entre aparelhos, contas ou cópia em servidor. Limpar os dados do site pode apagar os registros. Use **Exportar backup** para baixar um JSON e **Importar backup** para restaurá-lo em outro aparelho. A importação adiciona carros e revisões ausentes, preserva os nomes e registros existentes com o mesmo identificador e mantém a maior quilometragem disponível. Importar o mesmo arquivo novamente não duplica registros. Backups inválidos e falhas de armazenamento não substituem o histórico salvo.
 
 ## Executar localmente
 
@@ -32,7 +42,7 @@ O build gera arquivos estáticos em `dist/`, compatíveis com GitHub Pages e qua
 
 ### Verificação no navegador
 
-O teste opcional `npm run test:browser` requer Playwright e Google Chrome instalados, além do servidor local em execução. Verifica as 647 versões, entrada manual, ida e volta, divisão, projeção mensal, campos inválidos, preferências, cópia, quatro larguras de tela e cálculo offline. Defina `BROWSER_TEST_PLAYWRIGHT_MODULE` com o caminho de um módulo Playwright já instalado e `BROWSER_TEST_URL` para testar outra URL. Playwright é usado apenas na verificação e não é necessário para executar o app.
+O teste opcional `npm run test:browser` requer Playwright e Google Chrome instalados, além do servidor local em execução. Verifica as 647 versões, entrada manual, ida e volta, divisão, projeção mensal, campos inválidos, preferências, cópia, quatro larguras de tela e cálculo offline. Também verifica carros, revisões, edição/exclusão, prazos, backups, falhas de armazenamento, conflitos entre abas e gravação offline. Defina `BROWSER_TEST_PLAYWRIGHT_MODULE` com o caminho de um módulo Playwright já instalado e `BROWSER_TEST_URL` para testar outra URL. Playwright é usado apenas na verificação e não é necessário para executar o app.
 
 ## App e uso offline
 
@@ -79,4 +89,4 @@ URL prevista: `https://drlucaspcd.github.io/CombustivelInteligente/`.
 
 ## Estrutura
 
-`index.html` e `styles.css`: interface. `src/app.js`: interação e preferências locais. `src/calculator.js`: cálculo e validação. `src/vehicles.js`: catálogo com origem rastreável. `scripts/`: servidor, build e importação. `tests/`: regras de cálculo e integridade da base.
+`index.html` e `styles.css`: interface. `src/app.js`: calculadora e preferências locais. `src/calculator.js`: cálculo e validação. `src/vehicles.js`: catálogo com origem rastreável. `src/maintenance.js` e `src/maintenance-model.js`: histórico, armazenamento, validação e backups. `scripts/`: servidor, build e importação. `tests/`: cálculos, integridade da base, revisões e verificação no navegador.

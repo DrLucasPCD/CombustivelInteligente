@@ -24,21 +24,21 @@ const {chromium} = require(process.env.BROWSER_TEST_PLAYWRIGHT_MODULE || 'playwr
  await page.locator('#gasoline-price').fill('6,00');await page.locator('#distance').fill('100');
  await page.locator('#round-trip').check();await page.locator('.extras summary').click();
  await page.locator('#people').fill('3');await page.locator('#trips').fill('22');
- await page.locator('button[type=submit]').click();
+ await page.locator('#trip-form button[type=submit]').click();
  assert.match(await page.locator('#total-cost').innerText(),/90,00/);
  assert.match(await page.locator('#per-person').innerText(),/30,00/);
  assert.match(await page.locator('#monthly-cost').innerText(),/1\.980,00/);
  await page.locator('[data-route=city]').click();assert.match(await page.locator('#total-cost').innerText(),/120,00/);
  await page.locator('[data-route=highway]').click();assert.match(await page.locator('#total-cost').innerText(),/60,00/);
- await page.locator('#distance').fill('0');await page.locator('button[type=submit]').click();
+ await page.locator('#distance').fill('0');await page.locator('#trip-form button[type=submit]').click();
  assert.equal(await page.locator('#total-cost').innerText(),'—');assert.equal(await page.locator('#copy-result').isDisabled(),true);
- await page.locator('#distance').fill('100');await page.locator('button[type=submit]').click();
+ await page.locator('#distance').fill('100');await page.locator('#trip-form button[type=submit]').click();
  await page.reload();assert.match(await page.locator('#total-cost').innerText(),/60,00/);
  assert.equal(await page.locator('#manual-mode').getAttribute('aria-pressed'),'true');
  await page.locator('#copy-result').click();await page.waitForFunction(()=>document.getElementById('copy-status').textContent==='Copiado!');assert.equal(await page.locator('#copy-status').innerText(),'Copiado!');
  const clipboard=await page.evaluate(()=>navigator.clipboard.readText());assert.ok(clipboard.includes('R$ 60,00'));
  await page.locator('#reset-example').click();assert.equal(await page.locator('#catalog-mode').getAttribute('aria-pressed'),'true');
- await page.locator('#ethanol-price').fill('');await page.locator('button[type=submit]').click();
+ await page.locator('#ethanol-price').fill('');await page.locator('#trip-form button[type=submit]').click();
  assert.notEqual(await page.locator('#total-cost').innerText(),'—');assert.match(await page.locator('#comparison-content').innerText(),/Informe preços válidos/);
  await page.locator('#reset-example').click();
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow at ${width}`)}

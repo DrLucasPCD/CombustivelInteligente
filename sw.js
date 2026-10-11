@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'combustivel-inteligente-';
-const CACHE = `${CACHE_PREFIX}v1`;
+const CACHE = `${CACHE_PREFIX}v2`;
 const ASSETS = ['./', './index.html', './styles.css', './src/app.js', './src/calculator.js',
-  './src/vehicles.js', './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png',
+  './src/vehicles.js', './src/maintenance.js', './src/maintenance-model.js', './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png',
   ...[400, 500, 600, 700].map(weight => `./assets/fonts/dm-sans-${weight}.ttf`),
   ...[400, 500, 600, 700, 800].map(weight => `./assets/fonts/manrope-${weight}.ttf`)];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
