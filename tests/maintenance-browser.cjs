@@ -63,7 +63,7 @@ const { chromium } = require(process.env.BROWSER_TEST_PLAYWRIGHT_MODULE || 'play
     assert.equal(backup.cars.length, 2); assert.equal(backup.records.length, 1);
     const upload = json => page.locator('#backup-file').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(json)) });
     const stateBefore = await stored();
-    await upload({ schemaVersion: 2, cars: [], records: [] });
+    await upload({ schemaVersion: 999, cars: [], records: [] });
     await page.waitForFunction(() => document.getElementById('maintenance-status').textContent.includes('Não foi possível importar'));
     assert.deepEqual(await stored(), stateBefore);
     await upload(backup);

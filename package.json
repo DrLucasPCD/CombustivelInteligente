@@ -1,6 +1,6 @@
 {
   "name": "combustivel-inteligente",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "Calculadora de combustível por marca, modelo e versão, com dados do Inmetro.",
@@ -9,7 +9,7 @@
     "start": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:browser": "node tests/browser.cjs && node tests/maintenance-browser.cjs"
+    "test:browser": "node tests/browser.cjs && node tests/maintenance-browser.cjs && node tests/routine-browser.cjs"
   },
   "engines": { "node": ">=20" }
 }

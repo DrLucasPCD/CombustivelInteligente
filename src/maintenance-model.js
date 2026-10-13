@@ -1,5 +1,6 @@
+import { serviceItems } from './maintenance-schedule.js';
 export const MAINTENANCE_KEY = 'combustivel-inteligente-revisoes-v1';
-export const emptyGarage = () => ({ schemaVersion: 1, cars: [], records: [], selectedCar: '' });
+export const emptyGarage = () => ({ schemaVersion: 2, cars: [], records: [], selectedCar: '' });
 
 export function localDate(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -24,7 +25,17 @@ export function odometer(value, label = 'Quilometragem') {
 }
 export function validateCar(car) {
   if (!car || typeof car !== 'object') throw new Error('Cadastro de carro inválido.');
-  return { id: id(car.id), name: text(car.name, 'Nome do carro', 100, true), odometer: odometer(car.odometer) };
+  const usage = car.usage ?? 'normal';
+  if (!['normal', 'severe'].includes(usage)) throw new Error('Tipo de uso do carro inválido.');
+  const intervals = {};
+  if (car.intervals !== undefined && (!car.intervals || typeof car.intervals !== 'object' || Array.isArray(car.intervals))) throw new Error('Plano de manutenção inválido.');
+  for (const [key, interval] of Object.entries(car.intervals || {})) {
+    if (!serviceItems.some(item => item.id === key && !item.wear) || !interval || typeof interval !== 'object') throw new Error('Item do plano de manutenção inválido.');
+    if (interval.km !== null && (!Number.isInteger(interval.km) || interval.km < 1 || interval.km > 10000000)) throw new Error('Intervalo de manutenção: informe quilômetros inteiros maiores que zero.');
+    if (interval.months !== null && (!Number.isInteger(interval.months) || interval.months < 1 || interval.months > 1200)) throw new Error('Intervalo de manutenção: informe de 1 a 1.200 meses.');
+    intervals[key] = { km: interval.km, months: interval.months };
+  }
+  return { id: id(car.id), name: text(car.name, 'Nome do carro', 100, true), odometer: odometer(car.odometer), usage, intervals };
 }
 export function validateRecord(record, today) {
   if (!record || typeof record !== 'object') throw new Error('Revisão inválida.');
@@ -34,13 +45,15 @@ export function validateRecord(record, today) {
   const nextKm = record.nextKm === null ? null : odometer(record.nextKm, 'Quilometragem da próxima revisão');
   if (nextKm !== null && nextKm <= km) throw new Error('A próxima revisão deve ter quilometragem maior que a revisão registrada.');
   if (!Number.isFinite(record.cost) || record.cost < 0 || record.cost > 10000000) throw new Error('Custo: informe um valor de R$ 0 a R$ 10.000.000.');
-  return { id: id(record.id), carId: id(record.carId), date: record.date, odometer: km,
+  const selectedItems = record.serviceItems ?? [];
+  if (!Array.isArray(selectedItems) || selectedItems.length > serviceItems.length || new Set(selectedItems).size !== selectedItems.length || selectedItems.some(key => !serviceItems.some(item => item.id === key))) throw new Error('Lista de serviços selecionados inválida.');
+  return { id: id(record.id), carId: id(record.carId), date: record.date, odometer: km, serviceItems: selectedItems,
     services: text(record.services, 'Serviços realizados', 1500, true), cost: record.cost,
     workshop: text(record.workshop, 'Oficina', 150), notes: text(record.notes, 'Observações', 1500),
     nextDate: record.nextDate, nextKm };
 }
 export function validateGarage(raw, today) {
-  if (!raw || raw.schemaVersion !== 1 || !Array.isArray(raw.cars) || !Array.isArray(raw.records)) throw new Error('Arquivo de revisões inválido ou de uma versão não compatível.');
+  if (!raw || ![1, 2].includes(raw.schemaVersion) || !Array.isArray(raw.cars) || !Array.isArray(raw.records)) throw new Error('Arquivo de revisões inválido ou de uma versão não compatível.');
   if (raw.cars.length > 100 || raw.records.length > 5000) throw new Error('Limite do histórico: 100 carros e 5.000 revisões.');
   const cars = raw.cars.map(validateCar);
   const records = raw.records.map(record => validateRecord(record, today));
@@ -50,7 +63,7 @@ export function validateGarage(raw, today) {
     if (!car) throw new Error('Há uma revisão sem carro correspondente no arquivo.');
     if (car.odometer < record.odometer) throw new Error('A quilometragem atual do carro é menor que uma revisão registrada.');
   }
-  return { schemaVersion: 1, cars, records, selectedCar: cars.some(car => car.id === raw.selectedCar) ? raw.selectedCar : (cars[0]?.id || '') };
+  return { schemaVersion: 2, cars, records, selectedCar: cars.some(car => car.id === raw.selectedCar) ? raw.selectedCar : (cars[0]?.id || '') };
 }
 export function sortedRecords(garage, carId) {
   return garage.records.filter(record => record.carId === carId).sort((a, b) => b.date.localeCompare(a.date) || b.odometer - a.odometer || b.id.localeCompare(a.id));

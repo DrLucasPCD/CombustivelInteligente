@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'combustivel-inteligente-';
-const CACHE = `${CACHE_PREFIX}v2`;
+const CACHE = `${CACHE_PREFIX}v3`;
 const ASSETS = ['./', './index.html', './styles.css', './src/app.js', './src/calculator.js',
-  './src/vehicles.js', './src/maintenance.js', './src/maintenance-model.js', './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png',
+  './src/vehicles.js', './src/maintenance.js', './src/maintenance-model.js', './src/maintenance-planner.js', './src/maintenance-schedule.js', './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png',
   ...[400, 500, 600, 700].map(weight => `./assets/fonts/dm-sans-${weight}.ttf`),
   ...[400, 500, 600, 700, 800].map(weight => `./assets/fonts/manrope-${weight}.ttf`)];
 self.addEventListener('install', event => {

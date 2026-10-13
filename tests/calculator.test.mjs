@@ -18,6 +18,12 @@ test('city and highway endpoints use their respective consumption', () => {
   assert.equal(effectiveConsumption(trip.consumption, 1), 10);
   assert.equal(effectiveConsumption(trip.consumption, 0), 20);
 });
+test('daily return distance can differ from outbound distance and monthly liters are explicit', () => {
+  const result = calculateTrip({ ...trip, distance: 20, returnDistance: 25, roundTrip: true, consumption: { city: 10, highway: 10 }, price: 6, trips: 22 });
+  nearly(result.totalDistance, 45); nearly(result.monthlyDistance, 990);
+  nearly(result.monthlyLiters, 99); nearly(result.monthlyCost, 594);
+  assert.throws(() => calculateTrip({ ...trip, roundTrip: true, returnDistance: -1 }), RangeError);
+});
 test('fuel choice uses vehicle-specific ratio, including ties', () => {
   const input = { gasoline: { city: 10, highway: 10 }, ethanol: { city: 8, highway: 8 }, gasolinePrice: 6, ethanolPrice: 4.5, cityShare: .5 };
   assert.equal(compareFuels(input).winner, 'ethanol');

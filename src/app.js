@@ -7,7 +7,8 @@ const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', curre
 const decimal = (value, places = 1) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: places, maximumFractionDigits: places }).format(value);
 const distanceLabel = value => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(value);
 const STORAGE_KEY = 'combustivel-inteligente-v1';
-const inputIds = ['distance', 'manual-city', 'manual-highway', 'gasoline-price', 'ethanol-price', 'diesel-price', 'people', 'trips', 'city-share'];
+const inputIds = ['distance', 'return-distance', 'manual-city', 'manual-highway', 'gasoline-price', 'ethanol-price', 'diesel-price', 'people', 'trips', 'city-share'];
+let returnEdited = false;
 let mode = 'catalog';
 let route = 'mixed';
 let fuel = 'gasoline';
@@ -78,7 +79,7 @@ function setRoute(next) {
   $('mix-fields').hidden = route !== 'mixed';
 }
 function persist() {
-  const settings = { mode, route, fuel, vehicle: $('version').value, roundTrip: $('round-trip').checked,
+  const settings = { mode, route, fuel, vehicle: $('version').value, roundTrip: $('round-trip').checked, returnEdited,
     inputs: Object.fromEntries(inputIds.map(id => [id, $(id).value])) };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch { /* Private browsing or storage unavailable. */ }
 }
@@ -90,6 +91,8 @@ function restore() {
     if (vehicle) chooseBrand(vehicle.brand, vehicle.model, vehicle.id);
     for (const id of inputIds) if (typeof settings.inputs?.[id] === 'string' && settings.inputs[id].length < 24) $(id).value = settings.inputs[id];
     $('round-trip').checked = settings.roundTrip === true;
+    returnEdited = settings.returnEdited === true;
+    if (!settings.inputs?.['return-distance']) $('return-distance').value = $('distance').value;
     if (Object.hasOwn(fuelNames, settings.fuel)) fuel = settings.fuel;
     setMode(settings.mode === 'manual' ? 'manual' : 'catalog');
     setRoute(['city', 'mixed', 'highway'].includes(settings.route) ? settings.route : 'mixed');
@@ -97,27 +100,30 @@ function restore() {
 }
 
 function readTrip() {
-  const fields = [{ id: 'distance', label: 'Distância de ida', max: 100000 },
+  const fields = [{ id: 'distance', label: 'Quilômetros de ida por dia', max: 100000 },
     { id: `${fuel}-price`, label: 'Preço do combustível', max: 1000 },
     { id: 'people', label: 'Pessoas para dividir', max: 100, integer: true },
-    { id: 'trips', label: 'Trajetos por mês', max: 1000, integer: true }];
+    { id: 'trips', label: 'Dias de uso por mês', max: 31, integer: true }];
+  if ($('round-trip').checked) fields.push({ id: 'return-distance', label: 'Quilômetros de volta por dia', max: 100000, zero: true });
   if (mode === 'manual') fields.push({ id: 'manual-city', label: 'Consumo na cidade', max: 1000 }, { id: 'manual-highway', label: 'Consumo na estrada', max: 1000 });
   for (const id of inputIds) { $(id).removeAttribute('aria-invalid'); $(id).removeAttribute('aria-describedby'); }
   for (const field of fields) {
     const value = parseDecimal($(field.id).value);
-    if (!Number.isFinite(value) || value <= 0 || value > field.max || (field.integer && !Number.isInteger(value))) {
+    if (!Number.isFinite(value) || value < 0 || (!field.zero && value === 0) || value > field.max || (field.integer && !Number.isInteger(value))) {
       $(field.id).setAttribute('aria-invalid', 'true');
       $(field.id).setAttribute('aria-describedby', 'form-error');
-      return { error: `${field.label}: informe ${field.integer ? 'um número inteiro' : 'um valor'} maior que zero, até ${decimal(field.max, 0)}. Use vírgula ou ponto para decimais, sem separador de milhar.`, field: field.id };
+      return { error: `${field.label}: informe ${field.integer ? 'um número inteiro' : 'um valor'} ${field.zero ? 'de zero' : 'maior que zero'}, até ${decimal(field.max, 0)}. Use vírgula ou ponto para decimais, sem separador de milhar.`, field: field.id };
     }
   }
   return { input: { distance: parseDecimal($('distance').value), roundTrip: $('round-trip').checked,
+    returnDistance: parseDecimal($('return-distance').value),
     price: parseDecimal($(`${fuel}-price`).value), people: parseDecimal($('people').value),
     trips: parseDecimal($('trips').value), cityShare: cityShare(), consumption: currentConsumption() } };
 }
 function clearResult(message) {
   lastResult = null;
-  for (const id of ['total-cost', 'liters', 'cost-per-km', 'effective-consumption', 'per-person', 'monthly-cost']) $(id).textContent = '—';
+  for (const id of ['total-cost', 'liters', 'fuel-price-value', 'cost-per-km', 'effective-consumption', 'per-person', 'monthly-cost', 'daily-km', 'monthly-km', 'monthly-liters']) $(id).textContent = '—';
+  $('daily-distance-note').textContent = 'Informe os quilômetros de ida e volta para calcular o total diário.';
   $('result-route').textContent = message;
   $('monthly-caption').textContent = 'Projeção mensal de combustível';
   $('copy-result').disabled = true;
@@ -140,6 +146,7 @@ function renderComparison(result) {
 }
 function render({ save = true } = {}) {
   clearTimeout(timer);
+  $('return-distance').disabled = !$('round-trip').checked;
   $('city-share-label').textContent = `${$('city-share').value}% cidade · ${100 - Number($('city-share').value)}% estrada`;
   $('city-share').setAttribute('aria-valuetext', $('city-share-label').textContent);
   $('copy-status').textContent = '';
@@ -158,13 +165,18 @@ function render({ save = true } = {}) {
     $('total-cost').textContent = money(result.cost);
     $('result-route').textContent = `${distanceLabel(result.totalDistance)} km · ${trip.input.roundTrip ? 'ida e volta' : 'somente ida'} · ${routeLabel} · ${fuelNames[fuel]}\n${vehicleLabel}`;
     $('liters').textContent = `${decimal(result.liters, 2)} litros`;
+    $('fuel-price-value').textContent = `${money(trip.input.price)} / litro`;
     $('cost-per-km').textContent = `${money(result.costPerKm)} / km`;
     $('effective-consumption').textContent = `${decimal(result.kmPerLiter, 2)} km/l`;
     $('per-person').textContent = money(result.costPerPerson);
     $('monthly-cost').textContent = money(result.monthlyCost);
-    $('monthly-caption').textContent = `${trip.input.trips} ${trip.input.trips === 1 ? 'trajeto igual' : 'trajetos iguais'} por mês · apenas combustível`;
+    $('monthly-caption').textContent = `${trip.input.trips} ${trip.input.trips === 1 ? 'dia de uso' : 'dias de uso'} por mês · apenas combustível`;
+    $('daily-km').textContent = `${distanceLabel(result.totalDistance)} km`;
+    $('monthly-km').textContent = `${distanceLabel(result.monthlyDistance)} km`;
+    $('monthly-liters').textContent = `${decimal(result.monthlyLiters, 2)} litros`;
+    $('daily-distance-note').textContent = `Total por dia: ${distanceLabel(result.totalDistance)} km (${distanceLabel(trip.input.distance)} km de ida + ${distanceLabel(trip.input.roundTrip ? trip.input.returnDistance : 0)} km de volta).`;
     $('copy-result').disabled = false;
-    lastResult = `Combustível Inteligente\n${vehicleLabel}\n${$('result-route').textContent}\nCusto de combustível: ${money(result.cost)}\nCombustível: ${decimal(result.liters, 2)} l\nPor pessoa (${trip.input.people}): ${money(result.costPerPerson)}\nProjeção mensal (${trip.input.trips} trajetos): ${money(result.monthlyCost)}\nEstimativa com ${fuelNames[fuel]} a ${money(trip.input.price)}/l. Pedágios e outros gastos não incluídos.`;
+    lastResult = `Combustível Inteligente\n${vehicleLabel}\n${$('result-route').textContent}\nCusto por dia: ${money(result.cost)}\nConsumo: ${decimal(result.kmPerLiter, 2)} km/l\nCombustível por dia: ${decimal(result.liters, 2)} l\nPor pessoa (${trip.input.people}): ${money(result.costPerPerson)}\nPor mês (${trip.input.trips} dias): ${distanceLabel(result.monthlyDistance)} km · ${decimal(result.monthlyLiters, 2)} litros · ${money(result.monthlyCost)}\nEstimativa com ${fuelNames[fuel]} a ${money(trip.input.price)}/l. Pedágios e outros gastos não incluídos.`;
     renderComparison(result);
     if (save) persist();
     return trip;
@@ -182,7 +194,11 @@ $('version').addEventListener('change', () => { syncFuelOptions(); render(); });
 $('catalog-mode').addEventListener('click', () => { setMode('catalog'); render(); });
 $('manual-mode').addEventListener('click', () => { setMode('manual'); render(); });
 document.querySelectorAll('[data-route]').forEach(button => button.addEventListener('click', () => { setRoute(button.dataset.route); render(); }));
-for (const id of inputIds) $(id).addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(render, 150); });
+for (const id of inputIds) $(id).addEventListener('input', () => {
+  if (id === 'return-distance') returnEdited = true;
+  if (id === 'distance' && !returnEdited) $('return-distance').value = $('distance').value;
+  clearTimeout(timer); timer = setTimeout(render, 150);
+});
 $('round-trip').addEventListener('change', () => render());
 $('trip-form').addEventListener('submit', event => {
   event.preventDefault();
@@ -192,6 +208,7 @@ $('trip-form').addEventListener('submit', event => {
 });
 $('reset-example').addEventListener('click', () => {
   $('trip-form').reset();
+  returnEdited = false;
   fuel = 'gasoline';
   chooseBrand(defaultVehicle.brand, defaultVehicle.model, defaultVehicle.id);
   setMode('catalog'); setRoute('mixed'); render();

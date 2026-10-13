@@ -53,7 +53,7 @@ test('backup merging is idempotent and preserves newer existing records', () => 
   assert.equal(mergeGarages(merged.garage, incoming).garage.cars[0].odometer, 60000);
 });
 test('invalid backups, missing cars and duplicate IDs fail before persistence', () => {
-  assert.throws(() => validateGarage({ schemaVersion: 2, cars: [], records: [] }));
+  assert.throws(() => validateGarage({ schemaVersion: 999, cars: [], records: [] }));
   assert.throws(() => validateGarage({ ...garage(), records: [record({ carId: 'unknown' })] }));
   assert.throws(() => validateGarage({ ...garage(), records: [record(), record()] }));
   assert.throws(() => validateGarage({ ...garage(), cars: [{ ...car(), odometer: 40000 }], records: [record()] }));

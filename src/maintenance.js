@@ -1,4 +1,6 @@
 import { parseDecimal } from './calculator.js';
+import { createPlanner, selectedServiceItems, setServiceItems } from './maintenance-planner.js';
+import { serviceItems, serviceSchedule } from './maintenance-schedule.js';
 import { MAINTENANCE_KEY, emptyGarage, localDate, validateCar, validateGarage,
   sortedRecords, saveRecord, mergeGarages, nextMaintenance } from './maintenance-model.js';
 
@@ -14,6 +16,7 @@ let serviceCarId = '';
 let pendingDeletion = null;
 let carSubmitting = false;
 let serviceSubmitting = false;
+let planner;
 
 function node(tag, content, className = '') {
   const item = document.createElement(tag);
@@ -69,11 +72,12 @@ function render() {
   if (!garage.cars.length) $('garage-car').append(node('option', 'Nenhum carro cadastrado'));
   $('garage-car').value = garage.selectedCar || '';
   $('garage-car').disabled = !car || unavailable;
-  for (const id of ['add-car', 'empty-add-car', 'edit-car', 'delete-car', 'add-maintenance', 'import-maintenance']) $(id).disabled = unavailable;
+  for (const id of ['add-car', 'empty-add-car', 'edit-car', 'delete-car', 'add-maintenance', 'import-maintenance', 'edit-maintenance-plan']) $(id).disabled = unavailable;
   $('export-maintenance').disabled = !garage.cars.length && !unavailable;
   $('garage-empty').hidden = !!car;
   $('garage-content').hidden = !car;
   if (!car) return;
+  planner?.render(car);
   const records = sortedRecords(garage, car.id);
   $('garage-name').textContent = car.name;
   $('garage-odometer').textContent = `Quilometragem atual: ${km(car.odometer)} km`;
@@ -82,7 +86,15 @@ function render() {
   const next = nextMaintenance(garage, car.id, localDate());
   const panel = $('next-maintenance'); panel.className = `next-maintenance ${next.status}`;
   panel.replaceChildren(node('span', 'PRÓXIMA REVISÃO', 'overline'));
-  if (next.status === 'unset') {
+  const tracked = serviceSchedule(garage, car.id, localDate()).filter(item => ['due', 'soon', 'scheduled'].includes(item.status));
+  if (next.status === 'unset' && tracked.length) {
+    const due = tracked.filter(item => item.status === 'due').length;
+    const soon = tracked.filter(item => item.status === 'soon').length;
+    panel.className = `next-maintenance ${due ? 'due' : soon ? 'soon' : 'scheduled'}`;
+    panel.append(node('strong', due ? `${due} ${due === 1 ? 'item com prazo atingido' : 'itens com prazo atingido'}` : soon ? `${soon} ${soon === 1 ? 'item próximo do prazo' : 'itens próximos do prazo'}` : 'Plano de manutenção calculado'),
+      node('p', 'Veja as próximas datas e quilometragens de cada serviço no plano abaixo.'),
+      node('small', 'Cada item acompanha sua última execução. Vale o que ocorrer primeiro: tempo ou quilometragem.'));
+  } else if (next.status === 'unset') {
     panel.append(node('strong', 'Sem previsão cadastrada'), node('p', 'Informe a próxima data ou quilometragem ao registrar uma revisão.'));
   } else {
     const title = { due: 'A revisão atingiu o prazo informado', soon: 'A próxima revisão está chegando', scheduled: 'Sua próxima revisão está programada' }[next.status];
@@ -103,6 +115,7 @@ function render() {
     const heading = node('h4', `${dateLabel(record.date)} · ${km(record.odometer)} km`);
     top.append(heading, node('strong', money(record.cost), 'service-record-cost'));
     article.append(top, node('p', record.services, 'service-description'));
+    if (record.serviceItems.length) article.append(node('p', `Itens acompanhados: ${record.serviceItems.map(id => serviceItems.find(item => item.id === id).name).join(' · ')}`, 'service-meta'));
     if (record.workshop) article.append(node('p', `Oficina: ${record.workshop}`, 'service-meta'));
     if (record.notes) article.append(node('p', record.notes, 'service-notes'));
     const actions = node('div', undefined, 'service-actions');
@@ -127,14 +140,16 @@ function openCar(car) {
   const catalogSelected = $('catalog-mode').getAttribute('aria-pressed') === 'true';
   $('car-name').value = car?.name || (catalogSelected ? `${brand} ${model}`.trim() : '');
   $('car-odometer').value = car?.odometer ?? 0;
+  $('car-severe').checked = car?.usage === 'severe';
   $('car-dialog').showModal();
   $('car-name').focus();
 }
-function openService(record) {
+function openService(record, itemId) {
   const car = activeCar(); if (!car) return;
   editingRecord = record ? { ...record } : null;
   serviceCarId = car.id;
   $('maintenance-form').reset(); showFormError('service-error', '');
+  setServiceItems(record?.serviceItems || (itemId ? [itemId] : []));
   $('maintenance-dialog-title').textContent = record ? 'Editar revisão' : 'Registrar revisão';
   $('maintenance-dialog-car').textContent = car.name;
   $('service-date').max = localDate();
@@ -175,7 +190,7 @@ $('car-form').addEventListener('submit', async event => {
   carSubmitting = true;
   const submit = $('car-form').querySelector('[type=submit]'); submit.disabled = true;
   try {
-    const car = validateCar({ id: editingCar?.id || crypto.randomUUID(), name: $('car-name').value, odometer: parseDecimal($('car-odometer').value) });
+    const car = validateCar({ ...editingCar, id: editingCar?.id || crypto.randomUUID(), name: $('car-name').value, odometer: parseDecimal($('car-odometer').value), usage: $('car-severe').checked ? 'severe' : 'normal' });
     await commit(current => {
       if (editingCar) {
         const index = current.cars.findIndex(item => item.id === car.id);
@@ -194,9 +209,10 @@ $('maintenance-form').addEventListener('submit', async event => {
   serviceSubmitting = true;
   const submit = $('maintenance-form').querySelector('[type=submit]'); submit.disabled = true;
   try {
-    const record = { id: editingRecord?.id || crypto.randomUUID(), carId: serviceCarId,
+    const selectedItems = selectedServiceItems();
+    const record = { id: editingRecord?.id || crypto.randomUUID(), carId: serviceCarId, serviceItems: selectedItems,
       date: $('service-date').value, odometer: parseDecimal($('service-odometer').value),
-      services: $('service-description').value, cost: parseDecimal($('service-cost').value),
+      services: $('service-description').value.trim() || selectedItems.map(id => serviceItems.find(item => item.id === id).name).join('\n'), cost: parseDecimal($('service-cost').value),
       workshop: $('service-workshop').value, notes: $('service-notes').value,
       nextDate: $('service-next-date').value,
       nextKm: $('service-next-km').value.trim() === '' ? null : parseDecimal($('service-next-km').value) };
@@ -247,4 +263,5 @@ $('backup-file').addEventListener('change', async () => {
 });
 window.addEventListener('storage', event => { if (event.key === MAINTENANCE_KEY || event.key === null) { load(); render(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); render(); } });
+planner = createPlanner({ getGarage: () => garage, commit, message, openService, isUnavailable: () => unavailable });
 load(); render();

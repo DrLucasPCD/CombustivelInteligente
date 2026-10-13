@@ -15,20 +15,21 @@ export function effectiveConsumption({ city, highway }, cityShare = 0.5) {
   return 1 / (cityShare / city + (1 - cityShare) / highway);
 }
 
-export function calculateTrip({ distance, roundTrip = false, cityShare, consumption, price, people = 1, trips = 1 }) {
+export function calculateTrip({ distance, returnDistance = distance, roundTrip = false, cityShare, consumption, price, people = 1, trips = 1 }) {
   if (!Number.isFinite(distance) || distance <= 0 || distance > 100000) throw new RangeError('Informe uma distância entre 0 e 100.000 km, maior que zero.');
   if (!Number.isFinite(price) || price <= 0 || price > 1000) throw new RangeError('Informe um preço por litro maior que zero, até R$ 1.000.');
+  if (roundTrip && (!Number.isFinite(returnDistance) || returnDistance < 0 || returnDistance > 100000)) throw new RangeError('Informe uma distância de volta de 0 a 100.000 km.');
   if (!Number.isInteger(people) || people < 1 || people > 100) throw new RangeError('Informe de 1 a 100 pessoas.');
   if (!Number.isInteger(trips) || trips < 1 || trips > 1000) throw new RangeError('Informe de 1 a 1.000 trajetos por mês.');
   const kmPerLiter = effectiveConsumption(consumption, cityShare);
-  const totalDistance = distance * (roundTrip ? 2 : 1);
+  const totalDistance = distance + (roundTrip ? returnDistance : 0);
   const liters = totalDistance / kmPerLiter;
   const cost = liters * price;
   if (![kmPerLiter, liters, cost, cost * trips].every(n => Number.isFinite(n) && n > 0)) {
     throw new RangeError('Esses valores excedem o limite de cálculo. Revise o consumo, a distância e o preço.');
   }
   return { totalDistance, kmPerLiter, liters, cost, costPerKm: price / kmPerLiter,
-    costPerPerson: cost / people, monthlyCost: cost * trips };
+    costPerPerson: cost / people, monthlyCost: cost * trips, monthlyLiters: liters * trips, monthlyDistance: totalDistance * trips };
 }
 
 export function compareFuels({ gasoline, ethanol, gasolinePrice, ethanolPrice, cityShare }) {

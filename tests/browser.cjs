@@ -22,7 +22,7 @@ const {chromium} = require(process.env.BROWSER_TEST_PLAYWRIGHT_MODULE || 'playwr
  await page.locator('#manual-mode').click();
  await page.locator('#manual-city').fill('10');await page.locator('#manual-highway').fill('20');
  await page.locator('#gasoline-price').fill('6,00');await page.locator('#distance').fill('100');
- await page.locator('#round-trip').check();await page.locator('.extras summary').click();
+ await page.locator('#round-trip').check();
  await page.locator('#people').fill('3');await page.locator('#trips').fill('22');
  await page.locator('#trip-form button[type=submit]').click();
  assert.match(await page.locator('#total-cost').innerText(),/90,00/);
